@@ -44,6 +44,15 @@ describe('Auth (e2e)', () => {
       await http().get('/health').expect(200, { status: 'ok' });
     });
 
+    it('never answers 304: no ETag, so cached conditional requests still get the body', async () => {
+      const res = await http()
+        .get('/health')
+        .set('If-None-Match', 'W/"f-VaSQ4oDUiZblZNAEkkN+sX+q3Sg"')
+        .expect(200);
+      expect(res.headers.etag).toBeUndefined();
+      expect(res.body).toEqual({ status: 'ok' });
+    });
+
     it('GET /docs-json lists every auth route', async () => {
       const res = await http().get('/docs-json').expect(200);
       const paths = Object.keys(res.body.paths);

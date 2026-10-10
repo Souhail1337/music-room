@@ -4,6 +4,13 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 /** Shared by main.ts and the e2e tests so both run the exact same app. */
 export function configureApp(app: INestApplication): INestApplication {
   app.enableShutdownHooks();
+  // No ETags: Android's HTTP cache would replay them as If-None-Match and get a body-less 304,
+  // which the app reads as "can't reach the server". API answers are per-user and never cached.
+  (
+    app.getHttpAdapter().getInstance() as {
+      set(key: string, value: unknown): void;
+    }
+  ).set('etag', false);
   const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()

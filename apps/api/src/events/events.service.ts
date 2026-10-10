@@ -368,7 +368,11 @@ export class EventsService implements OnModuleInit {
     return {
       ...this.state(snapshot),
       isHost: snapshot.event.hostId === viewer.userId,
-      canAct: { allowed: decision.allowed, reason: decision.reason },
+      // Events never produce READ_ONLY (that reason is playlist-only).
+      canAct: {
+        allowed: decision.allowed,
+        reason: decision.reason as EventDetail['canAct']['reason'],
+      },
       myVotes: await this.events.myVotes(snapshot.event.id, viewer.userId),
     };
   }

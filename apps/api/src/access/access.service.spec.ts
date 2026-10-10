@@ -135,4 +135,51 @@ describe('AccessService', () => {
       expect(code(() => access.assertCanAct(guest, resource()))).toBeNull();
     });
   });
+
+  describe('playlists (kind: playlist)', () => {
+    const playlist = (overrides: Partial<AccessResource> = {}) =>
+      resource({ kind: 'playlist', ...overrides });
+
+    it('everyone: any viewer may edit', () => {
+      expect(access.canAct(guest, playlist())).toEqual({
+        allowed: true,
+        reason: null,
+      });
+    });
+
+    it('invited: non-invited viewers are READ_ONLY; invitees and the owner may edit', () => {
+      const r = playlist({ license: 'INVITED' });
+      expect(access.canView(guest, r)).toBe(true);
+      expect(access.canAct(guest, r)).toEqual({
+        allowed: false,
+        reason: 'READ_ONLY',
+      });
+      expect(access.canAct(invitee, r).allowed).toBe(true);
+      expect(access.canAct(host, r).allowed).toBe(true);
+    });
+
+    it('private: invisible to non-invited users; the owner always passes', () => {
+      const r = playlist({ visibility: 'PRIVATE', license: 'INVITED' });
+      expect(access.canView(guest, r)).toBe(false);
+      expect(access.canView(host, r)).toBe(true);
+      expect(access.canAct(host, r).allowed).toBe(true);
+    });
+
+    it('assertCanAct throws 403 READ_ONLY; events keep NOT_INVITED', () => {
+      const thrown = (): { code?: string; getStatus?: () => number } => {
+        try {
+          access.assertCanAct(guest, playlist({ license: 'INVITED' }));
+        } catch (e) {
+          return e as { code?: string; getStatus?: () => number };
+        }
+        return {};
+      };
+      const error = thrown();
+      expect(error?.code).toBe('READ_ONLY');
+      expect(error?.getStatus?.()).toBe(403);
+      expect(
+        access.canAct(guest, resource({ license: 'INVITED' })).reason,
+      ).toBe('NOT_INVITED');
+    });
+  });
 });

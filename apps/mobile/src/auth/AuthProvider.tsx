@@ -74,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccount(null);
       setStatus('signedOut');
     });
+    // Boot talks to the server (an external system) and reports back through setState.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void boot();
     return () => api.setSessionEndedHandler(null);
   }, [boot, queryClient]);

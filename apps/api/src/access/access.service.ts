@@ -4,8 +4,13 @@ import { Errors } from '../common/errors/app-error.js';
 export type Visibility = 'PUBLIC' | 'PRIVATE';
 export type License = 'EVERYONE' | 'INVITED' | 'ON_SITE';
 
-/** What the policy needs to know about an Event (spec C adds Playlists). */
+/**
+ * What the policy needs to know about an Event or a Playlist. For a playlist, `hostId` is the
+ * owner, the license is `EVERYONE | INVITED`, and the venue / window fields are null.
+ */
 export interface AccessResource {
+  /** Defaults to `event`. A playlist refuses non-editors with `READ_ONLY` instead of `NOT_INVITED`. */
+  kind?: 'event' | 'playlist';
   hostId: string;
   visibility: Visibility;
   license: License;
@@ -29,7 +34,11 @@ export interface ActContext {
 }
 
 export type DenyReason =
-  'NOT_INVITED' | 'OUTSIDE_AREA' | 'OUTSIDE_TIME_WINDOW' | 'LOCATION_REQUIRED';
+  | 'NOT_INVITED'
+  | 'OUTSIDE_AREA'
+  | 'OUTSIDE_TIME_WINDOW'
+  | 'LOCATION_REQUIRED'
+  | 'READ_ONLY';
 
 export type ActDecision =
   { allowed: true; reason: null } | { allowed: false; reason: DenyReason };
@@ -64,19 +73,23 @@ export class AccessService {
     return resource.visibility === 'PUBLIC' || viewer.invited;
   }
 
-  /** Whether the viewer may vote / suggest. On-site is checked here, in UTC (AD-5). */
+  /**
+   * Whether the viewer may vote / suggest (events) or edit the track list (playlists).
+   * On-site is checked here, in UTC (AD-5).
+   */
   canAct(
     viewer: Viewer,
     resource: AccessResource,
     ctx: ActContext = {},
   ): ActDecision {
     if (viewer.userId === resource.hostId) return ALLOWED;
-    if (!this.canView(viewer, resource)) return deny('NOT_INVITED');
+    const refused = resource.kind === 'playlist' ? 'READ_ONLY' : 'NOT_INVITED';
+    if (!this.canView(viewer, resource)) return deny(refused);
     switch (resource.license) {
       case 'EVERYONE':
         return ALLOWED;
       case 'INVITED':
-        return viewer.invited ? ALLOWED : deny('NOT_INVITED');
+        return viewer.invited ? ALLOWED : deny(refused);
       case 'ON_SITE': {
         const now = (ctx.now ?? new Date()).getTime();
         if (
@@ -126,6 +139,8 @@ export class AccessService {
         });
       case 'LOCATION_REQUIRED':
         throw Errors.locationRequired();
+      case 'READ_ONLY':
+        throw Errors.readOnly();
     }
   }
 }

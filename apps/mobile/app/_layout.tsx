@@ -2,6 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SplashScreen, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
@@ -13,22 +15,27 @@ void SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: 1 } } }));
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <PaperProvider theme={paperTheme}>
-          <ThemeProvider value={navigationTheme}>
-            <SnackbarProvider>
-              <AuthProvider>
-                <StatusBar style="light" />
-                <RootNavigator />
-              </AuthProvider>
-            </SnackbarProvider>
-          </ThemeProvider>
-        </PaperProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    // Drag-to-reorder and swipe-to-remove (playlist editor) need the gesture-handler root.
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <PaperProvider theme={paperTheme}>
+            <ThemeProvider value={navigationTheme}>
+              <SnackbarProvider>
+                <AuthProvider>
+                  <StatusBar style="light" />
+                  <RootNavigator />
+                </AuthProvider>
+              </SnackbarProvider>
+            </ThemeProvider>
+          </PaperProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: tokens.colors.surfaceBase } });
 
 /** Which screens exist depends only on the session state the server reported. */
 function RootNavigator() {
@@ -62,6 +69,17 @@ function RootNavigator() {
         />
         <Stack.Screen
           name="events/[id]/invite"
+          options={{ title: 'Invite people', presentation: 'modal', headerStyle: { backgroundColor: tokens.colors.surfaceOverlay } }}
+        />
+        <Stack.Screen name="playlists/new" options={{ title: 'New playlist' }} />
+        <Stack.Screen name="playlists/[id]/index" options={{ title: '' }} />
+        <Stack.Screen name="playlists/[id]/edit" options={{ title: 'Edit playlist' }} />
+        <Stack.Screen
+          name="playlists/[id]/add"
+          options={{ title: 'Add track', presentation: 'modal', headerStyle: { backgroundColor: tokens.colors.surfaceOverlay } }}
+        />
+        <Stack.Screen
+          name="playlists/[id]/invite"
           options={{ title: 'Invite people', presentation: 'modal', headerStyle: { backgroundColor: tokens.colors.surfaceOverlay } }}
         />
       </Stack.Protected>

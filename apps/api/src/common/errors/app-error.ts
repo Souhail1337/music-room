@@ -152,6 +152,44 @@ export const Errors = {
       HttpStatus.FORBIDDEN,
       details,
     ),
+  playlistNotFound: () =>
+    new AppError(
+      'NOT_FOUND',
+      "This playlist doesn't exist or is private.",
+      HttpStatus.NOT_FOUND,
+    ),
+  playlistEntryNotFound: () =>
+    new AppError(
+      'NOT_FOUND',
+      'This track is no longer in the playlist.',
+      HttpStatus.NOT_FOUND,
+    ),
+  notOwner: () =>
+    new AppError(
+      'NOT_OWNER',
+      'Only the owner can do this.',
+      HttpStatus.FORBIDDEN,
+    ),
+  readOnly: () =>
+    new AppError(
+      'READ_ONLY',
+      'Only invited people can edit this playlist.',
+      HttpStatus.FORBIDDEN,
+    ),
+  /** AD-3: `details` carries the current playlist and who made the winning edit. */
+  versionConflict: (details: unknown) =>
+    new AppError(
+      'VERSION_CONFLICT',
+      'Someone changed the playlist first. The list was updated.',
+      HttpStatus.CONFLICT,
+      details,
+    ),
+  trackAlreadyInPlaylist: () =>
+    new AppError(
+      'TRACK_ALREADY_IN_PLAYLIST',
+      'This track is already in the playlist.',
+      HttpStatus.CONFLICT,
+    ),
   locationRequired: () =>
     new AppError(
       'LOCATION_REQUIRED',

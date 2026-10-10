@@ -34,7 +34,8 @@ function toWindow(day: Date, start: string, end: string): { startsAt: string; en
   return { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() };
 }
 
-function Choice<T extends string | number>({
+/** Single-select chips (visibility / license). Shared with the playlist form. */
+export function Choice<T extends string | number>({
   options,
   value,
   onChange,

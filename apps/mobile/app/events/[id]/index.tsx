@@ -46,6 +46,8 @@ export default function EventScreen() {
   const query = useEventDetail(id, location.coords);
   const detail = query.data;
   const needsLocation = detail?.event.license === 'on_site' && detail.isHost === false;
+  // The position is needed to load the event, and the event says whether a position is needed.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setOnSite(needsLocation), [needsLocation]);
 
   const socketStatus = useRealtimeStatus();

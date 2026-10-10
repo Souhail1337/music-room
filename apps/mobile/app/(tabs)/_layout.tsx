@@ -6,9 +6,13 @@ import { tokens } from '@/theme';
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
-const tabIcon =
-  (name: IconName) =>
-  ({ color, size }: { color: ColorValue; size: number }) => <MaterialCommunityIcons name={name} color={color} size={size} />;
+const tabIcon = (name: IconName) => {
+  const TabIcon = ({ color, size }: { color: ColorValue; size: number }) => (
+    <MaterialCommunityIcons name={name} color={color} size={size} />
+  );
+  TabIcon.displayName = `TabIcon(${name})`;
+  return TabIcon;
+};
 
 /** Bottom navigation: Discover · Events · Playlists · Profile (EXPERIENCE.md IA). */
 export default function TabsLayout() {

@@ -1,4 +1,4 @@
-// Music Room — data model. Binding constraints come from the architecture spine (AD-2, AD-5, AD-6, AD-8, AD-9, AD-10).
+// Music Room — data model. Binding constraints come from the architecture spine (AD-2, AD-3, AD-5, AD-6, AD-8, AD-9, AD-10).
 
 generator client {
   provider            = "prisma-client"
@@ -29,6 +29,11 @@ model User {
   eventInvites EventInvite[]
   suggestions  Suggestion[]
   votes        Vote[]
+
+  ownedPlaylists   Playlist[]       @relation("PlaylistOwner")
+  editedPlaylists  Playlist[]       @relation("PlaylistLastEditor")
+  playlistInvites  PlaylistInvite[]
+  playlistTracks   PlaylistTrack[]
 
   @@map("users")
 }
@@ -104,8 +109,9 @@ model Track {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  suggestions  Suggestion[]
-  nowPlayingIn Event[]
+  suggestions    Suggestion[]
+  nowPlayingIn   Event[]
+  playlistTracks PlaylistTrack[]
 
   @@map("tracks")
 }
@@ -197,4 +203,67 @@ model Vote {
   @@id([userId, suggestionId])
   @@index([suggestionId])
   @@map("votes")
+}
+
+enum PlaylistLicense {
+  EVERYONE
+  INVITED
+}
+
+/// A collaborative playlist (FR-17..FR-21). Every accepted edit increments `version`; track edits
+/// carry `baseVersion` and are serialized by locking this row (AD-3). Visibility reuses the
+/// event enum (public | private).
+model Playlist {
+  id           String          @id @default(uuid()) @db.Uuid
+  ownerId      String          @db.Uuid
+  name         String
+  description  String          @default("")
+  visibility   EventVisibility @default(PUBLIC)
+  license      PlaylistLicense @default(EVERYONE)
+  version      Int             @default(1)
+  lastEditorId String?         @db.Uuid
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  owner      User             @relation("PlaylistOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  lastEditor User?            @relation("PlaylistLastEditor", fields: [lastEditorId], references: [id], onDelete: SetNull)
+  invites    PlaylistInvite[]
+  tracks     PlaylistTrack[]
+
+  @@index([ownerId])
+  @@index([visibility, createdAt])
+  @@map("playlists")
+}
+
+model PlaylistInvite {
+  playlistId String   @db.Uuid
+  userId     String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([playlistId, userId])
+  @@index([userId])
+  @@map("playlist_invites")
+}
+
+/// One entry of a playlist. A track appears at most once per playlist (AD-3); positions are
+/// rewritten as 0..n-1 after every edit, under the playlist row lock.
+model PlaylistTrack {
+  id         String   @id @default(uuid()) @db.Uuid
+  playlistId String   @db.Uuid
+  trackId    String
+  position   Int
+  addedById  String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  track    Track    @relation(fields: [trackId], references: [id], onDelete: Restrict)
+  addedBy  User     @relation(fields: [addedById], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, trackId])
+  @@index([playlistId, position])
+  @@index([addedById])
+  @@map("playlist_tracks")
 }

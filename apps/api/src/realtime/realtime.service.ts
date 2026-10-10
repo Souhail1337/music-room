@@ -4,6 +4,18 @@ import type { Server, Socket } from 'socket.io';
 /** Decides whether a user may join a room `<prefix>:<id>`; registered by the owning domain module. */
 export type RoomAuthorizer = (userId: string, id: string) => Promise<boolean>;
 
+/** Display names for presence; registered by the domain module so realtime never imports users. */
+export type PresenceResolver = (
+  userIds: string[],
+) => Promise<{ id: string; displayName: string }[]>;
+
+/** Payload of `presence.updated`. `viewers` is present for rooms whose prefix has a resolver. */
+export interface PresencePayload {
+  room: string;
+  listeners: number;
+  viewers?: { id: string; displayName: string }[];
+}
+
 export interface SocketData {
   userId: string;
 }
@@ -20,6 +32,7 @@ export class RealtimeService {
   private readonly logger = new Logger(RealtimeService.name);
   private server: Server | null = null;
   private readonly authorizers = new Map<string, RoomAuthorizer>();
+  private readonly resolvers = new Map<string, PresenceResolver>();
 
   attach(server: Server): void {
     this.server = server;
@@ -27,6 +40,11 @@ export class RealtimeService {
 
   registerRoomAuthorizer(prefix: string, authorizer: RoomAuthorizer): void {
     this.authorizers.set(prefix, authorizer);
+  }
+
+  /** Makes `presence.updated` for `<prefix>:<id>` rooms carry the viewers' names. */
+  registerPresenceResolver(prefix: string, resolver: PresenceResolver): void {
+    this.resolvers.set(prefix, resolver);
   }
 
   /** False for malformed rooms, unknown prefixes, and anything the authorizer refuses. */
@@ -53,11 +71,23 @@ export class RealtimeService {
     return this.userIdsIn(room).size;
   }
 
-  presence(room: string): void {
-    this.emit(room, 'presence.updated', {
-      room,
-      listeners: this.listenerCount(room),
-    });
+  /** Distinct users in the room, with names when the room's domain registered a resolver. */
+  async presenceOf(room: string): Promise<PresencePayload> {
+    const ids = [...this.userIdsIn(room)];
+    const payload: PresencePayload = { room, listeners: ids.length };
+    const prefix = ROOM.exec(room)?.[1];
+    const resolver = prefix ? this.resolvers.get(prefix) : undefined;
+    if (resolver) payload.viewers = await resolver(ids);
+    return payload;
+  }
+
+  /** Broadcasts who is in the room now. Never throws. */
+  async presence(room: string): Promise<void> {
+    try {
+      this.emit(room, 'presence.updated', await this.presenceOf(room));
+    } catch (error) {
+      this.logger.warn(`presence failed for ${room}: ${String(error)}`);
+    }
   }
 
   /** Re-checks every socket in the room (after visibility or invite changes) and removes refused ones. */
@@ -71,7 +101,7 @@ export class RealtimeService {
         removed.push(socket);
       }
     }
-    if (removed.length > 0) this.presence(room);
+    if (removed.length > 0) await this.presence(room);
   }
 
   private socketsIn(room: string): Socket[] {

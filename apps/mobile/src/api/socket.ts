@@ -8,11 +8,11 @@ interface RoomHandlers {
   onEvent(event: string, payload: unknown): void;
   /** Called after each (re)connect once the room is joined again: refetch over REST (AD-1). */
   onResync(): void;
-  /** The server refused or removed us from the room (private event, invite removed). */
+  /** The server refused or removed us from the room (private event / playlist, invite removed). */
   onRefused(): void;
 }
 
-const ROOM_EVENTS = ['queue.updated', 'presence.updated'] as const;
+const ROOM_EVENTS = ['queue.updated', 'playlist.updated', 'presence.updated'] as const;
 
 /**
  * The app's only Socket.IO client, built from the stored serverUrl (AD-11). It only listens:
@@ -88,6 +88,7 @@ class RealtimeClient {
     });
     for (const event of ROOM_EVENTS) {
       socket.on(event, (payload: { room?: string; event?: { id?: string } }) => {
+        // Playlist and presence pushes name their room; queue pushes carry the event.
         const room = payload?.room ?? (payload?.event?.id ? `event:${payload.event.id}` : null);
         if (!room) return;
         this.rooms.get(room)?.forEach((h) => h.onEvent(event, payload));

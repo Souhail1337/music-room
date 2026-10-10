@@ -77,6 +77,12 @@ export class UsersService {
     return this.users.search(text, normalizeEmail(text), excludeId, 20);
   }
 
+  /** `{id, displayName}` of the given users (unknown ids are skipped), sorted by name. */
+  refs(ids: string[]): Promise<{ id: string; displayName: string }[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.users.refs(ids);
+  }
+
   markEmailVerified(id: string): Promise<User> {
     return this.users.update(id, { emailVerifiedAt: new Date() });
   }

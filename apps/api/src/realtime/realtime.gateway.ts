@@ -65,7 +65,9 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     // Rooms are already empty in 'disconnect': capture them first to update their listener count.
     socket.on('disconnecting', () => {
       const rooms = [...socket.rooms].filter((room) => room !== socket.id);
-      setImmediate(() => rooms.forEach((room) => this.realtime.presence(room)));
+      setImmediate(() =>
+        rooms.forEach((room) => void this.realtime.presence(room)),
+      );
     });
   }
 
@@ -81,7 +83,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       if (!(await this.realtime.canJoin(userId, room)))
         return { ok: false, code: 'NOT_FOUND' };
       await socket.join(room);
-      this.realtime.presence(room);
+      void this.realtime.presence(room);
       return { ok: true, room, listeners: this.realtime.listenerCount(room) };
     } catch (error) {
       this.logger.warn(`join failed: ${String(error)}`);
@@ -98,7 +100,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     if (!room || !socket.rooms.has(room) || room === socket.id)
       return { ok: false };
     await socket.leave(room);
-    this.realtime.presence(room);
+    void this.realtime.presence(room);
     return { ok: true };
   }
 

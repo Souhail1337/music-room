@@ -51,7 +51,7 @@ test-e2e: db-up check-node ## API e2e tests against the musicroom_test database
 
 lint: check-node ## Lint + type-check API and mobile
 	cd $(API) && npm run lint && npm run build
-	cd $(MOBILE) && npx tsc --noEmit
+	cd $(MOBILE) && npx tsc --noEmit && npx expo lint
 
 mobile: ## Build and run the Android dev build on the emulator/device
 	cd $(MOBILE) && npx expo run:android

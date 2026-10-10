@@ -1,11 +1,19 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useIsMutating, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { AccessibilityInfo } from 'react-native';
 import { ApiError } from './errors';
 import { eventsApi, type Coords, type EventDetail, type EventState, type QueuePush, type Scope } from './events';
 import { musicApi } from './music';
+import {
+  playlistsApi,
+  type PlaylistDetail,
+  type PlaylistPush,
+  type PlaylistScope,
+  type PlaylistState,
+  type VersionConflictDetails,
+} from './playlists';
 import { realtime } from './socket';
-import { usersApi } from './users';
+import { usersApi, type UserRef } from './users';
 
 export const queryKeys = {
   event: (id: string) => ['event', id] as const,
@@ -14,6 +22,10 @@ export const queryKeys = {
   music: (q: string) => ['music', q] as const,
   users: (q: string) => ['users', q] as const,
   invites: (id: string) => ['invites', id] as const,
+  playlist: (id: string) => ['playlist', id] as const,
+  playlists: (scope: PlaylistScope, q: string) => ['playlists', scope, q] as const,
+  allPlaylists: ['playlists'] as const,
+  playlistInvites: (id: string) => ['playlistInvites', id] as const,
 };
 
 /** 404 and 403 are answers, not glitches: don't retry them. */
@@ -216,5 +228,159 @@ export function useStoreEvent() {
   return (data: EventDetail) => {
     setDetail(queryClient, data.event.id, data);
     void queryClient.invalidateQueries({ queryKey: queryKeys.allEvents });
+  };
+}
+
+// --- Playlists (FR-17..FR-21) -------------------------------------------------------------------
+
+/** Same rule as events: shared state from the newer copy, the caller's own fields from REST. */
+export function mergePlaylist(old: PlaylistDetail | undefined, next: PlaylistDetail): PlaylistDetail {
+  if (!old || next.version >= old.version) return next;
+  return { ...old, isOwner: next.isOwner, canEdit: next.canEdit };
+}
+
+/**
+ * Writes server shared state (a push, or the `details.playlist` of a 409) into the cache. Drops it
+ * unless its version is newer than ours (AD-1); `force` also accepts the same version, so a 409
+ * snaps an optimistic reorder (made without a version bump) back to the server order.
+ */
+export function applyPlaylistState(
+  old: PlaylistDetail | undefined,
+  state: PlaylistState,
+  force = false,
+): PlaylistDetail | undefined {
+  if (!old) return old;
+  if (state.version < old.version || (!force && state.version === old.version)) return old;
+  return { ...old, playlist: state.playlist, tracks: state.tracks, version: state.version, lastEditor: state.lastEditor };
+}
+
+export function usePlaylistList(scope: PlaylistScope, q: string) {
+  return useQuery({
+    queryKey: queryKeys.playlists(scope, q),
+    queryFn: () => playlistsApi.list(scope, q || undefined),
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** The playlist detail: the single copy of the playlist on the phone (REST answers + pushes). */
+export function usePlaylistDetail(id: string) {
+  return useQuery({ queryKey: queryKeys.playlist(id), queryFn: () => playlistsApi.get(id), retry });
+}
+
+export function usePlaylistInvites(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: queryKeys.playlistInvites(id),
+    queryFn: () => playlistsApi.invites(id),
+    enabled,
+    retry,
+  });
+}
+
+/** Joins `playlist:<id>` while mounted: pushes write into the cache, presence keeps the avatars live. */
+export function usePlaylistRoom(id: string, enabled: boolean) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    const key = queryKeys.playlist(id);
+    return realtime.join(`playlist:${id}`, {
+      onEvent: (event, payload) => {
+        if (event === 'playlist.updated') {
+          const push = payload as PlaylistPush;
+          queryClient.setQueryData<PlaylistDetail>(key, (old) => applyPlaylistState(old, push));
+          // Settings or invites may change what *I* can do: only REST knows that.
+          if (push.change === 'settings' || push.change === 'invites') void queryClient.invalidateQueries({ queryKey: key });
+        } else if (event === 'presence.updated') {
+          const { viewers } = payload as { viewers?: UserRef[] };
+          if (viewers) queryClient.setQueryData<PlaylistDetail>(key, (old) => (old ? { ...old, viewers } : old));
+        }
+      },
+      onResync: () => void queryClient.invalidateQueries({ queryKey: key }),
+      onRefused: () => void queryClient.invalidateQueries({ queryKey: key }),
+    });
+  }, [enabled, id, queryClient]);
+}
+
+export function conflictOf(error: unknown): VersionConflictDetails | null {
+  return error instanceof ApiError && error.code === 'VERSION_CONFLICT' ? (error.details as VersionConflictDetails) : null;
+}
+
+function reorder<T>(items: T[], from: number, to: number): T[] {
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
+const editKey = (id: string) => ['playlistEdit', id] as const;
+
+/** True while any track edit of this playlist is in flight (on any screen): edit controls stay disabled. */
+export function usePlaylistEditPending(id: string): boolean {
+  return useIsMutating({ mutationKey: editKey(id) }) > 0;
+}
+
+/**
+ * Track edits (AD-3). Each request carries an explicit `baseVersion`: the version of the list the
+ * user acted on (captured when the gesture, menu or sheet started), never whatever the cache holds
+ * when the request leaves. On 409 the server state wins: it is written to the cache as-is and the
+ * edit is NOT re-applied; the screen tells the user who changed the list.
+ */
+export function usePlaylistEdits(id: string) {
+  const queryClient = useQueryClient();
+  const key = queryKeys.playlist(id);
+  const current = () => queryClient.getQueryData<PlaylistDetail>(key);
+  const store = (data: PlaylistDetail) => {
+    queryClient.setQueryData<PlaylistDetail>(key, (old) => mergePlaylist(old, data));
+    void queryClient.invalidateQueries({ queryKey: queryKeys.allPlaylists });
+  };
+  const onFailure = (error: unknown) => {
+    const details = conflictOf(error);
+    if (details) queryClient.setQueryData<PlaylistDetail>(key, (old) => applyPlaylistState(old, details.playlist, true));
+    else void queryClient.invalidateQueries({ queryKey: key });
+  };
+
+  const add = useMutation({
+    mutationKey: editKey(id),
+    mutationFn: ({ trackId, baseVersion }: { trackId: string; baseVersion: number }) =>
+      playlistsApi.addTrack(id, trackId, baseVersion),
+    onSuccess: store,
+    onError: onFailure,
+  });
+
+  const move = useMutation({
+    mutationKey: editKey(id),
+    mutationFn: ({ entryId, toIndex, baseVersion }: { entryId: string; toIndex: number; baseVersion: number }) =>
+      playlistsApi.moveTrack(id, entryId, toIndex, baseVersion),
+    // Optimistic: the row stays where it was dropped; the answer (or a push) replaces it.
+    onMutate: async ({ entryId, toIndex, baseVersion }) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      queryClient.setQueryData<PlaylistDetail>(key, (old) => {
+        // The list changed since the user acted: leave it; the server will answer 409.
+        if (!old || old.version !== baseVersion) return old;
+        const from = old.tracks.findIndex((e) => e.id === entryId);
+        if (from < 0 || toIndex < 0 || toIndex >= old.tracks.length) return old;
+        return { ...old, tracks: reorder(old.tracks, from, toIndex).map((e, position) => ({ ...e, position })) };
+      });
+    },
+    onSuccess: store,
+    onError: onFailure,
+  });
+
+  const remove = useMutation({
+    mutationKey: editKey(id),
+    mutationFn: ({ entryId, baseVersion }: { entryId: string; baseVersion: number }) =>
+      playlistsApi.removeTrack(id, entryId, baseVersion),
+    onSuccess: store,
+    onError: onFailure,
+  });
+
+  return { add, move, remove, current };
+}
+
+/** Writes a fresh REST answer (create / edit) into the caches. */
+export function useStorePlaylist() {
+  const queryClient = useQueryClient();
+  return (data: PlaylistDetail) => {
+    queryClient.setQueryData<PlaylistDetail>(queryKeys.playlist(data.playlist.id), (old) => mergePlaylist(old, data));
+    void queryClient.invalidateQueries({ queryKey: queryKeys.allPlaylists });
   };
 }

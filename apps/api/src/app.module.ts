@@ -16,6 +16,7 @@ import { EventsModule } from './events/events.module.js';
 import { ActionLogInterceptor } from './logs/action-log.interceptor.js';
 import { LogsModule } from './logs/logs.module.js';
 import { MusicModule } from './music/music.module.js';
+import { PlaylistsModule } from './playlists/playlists.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { UsersModule } from './users/users.module.js';
 
@@ -36,6 +37,7 @@ import { UsersModule } from './users/users.module.js';
     MusicModule,
     AccessModule,
     EventsModule,
+    PlaylistsModule,
   ],
   providers: [
     { provide: APP_PIPE, useFactory: createValidationPipe },

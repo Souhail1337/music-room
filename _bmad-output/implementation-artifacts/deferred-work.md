@@ -18,3 +18,6 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-a-foundation-and-accounts.md`
   summary: Check whether the API sees one client IP for every device behind Docker Desktop port forwarding, which would make the per-IP throttles shared.
   evidence: Unverified (would be medium). Settle it by logging `req.ip` (action_logs.ip) for requests from two different LAN devices against `make up`.
+- source_spec: `_bmad-output/implementation-artifacts/spec-c-playlist-editor.md`
+  summary: Unit-test the mobile playlist cache rules (applyPlaylistState force/stale drop, mergePlaylist) and conflictText once a mobile test runner exists.
+  evidence: apps/mobile has no test runner; breaking the equal-version `force` rule would leave an optimistic reorder on screen after a 409 with nothing failing.

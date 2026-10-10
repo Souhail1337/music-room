@@ -46,4 +46,13 @@ export class UsersRepository {
       take,
     });
   }
+
+  /** id + display name only, for presence lists. */
+  refs(ids: string[]): Promise<{ id: string; displayName: string }[]> {
+    return this.prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, displayName: true },
+      orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
+    });
+  }
 }

@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { authApi, type AuthResponse, type Me } from '../api/auth';
 import { api } from '../api/client';
 import { ApiError, NetworkError } from '../api/errors';
+import { realtime } from '../api/socket';
 import { getGoogleIdToken, googleSignOut } from './google';
 
 export type AuthStatus = 'booting' | 'unreachable' | 'signedOut' | 'unverified' | 'signedIn';
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     api.setSessionEndedHandler(() => {
+      realtime.reset();
       queryClient.clear();
       setAccount(null);
       setStatus('signedOut');
@@ -91,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (refreshToken) await authApi.logout(refreshToken).catch(() => undefined);
     await googleSignOut();
     await api.clearTokens();
+    realtime.reset();
     queryClient.clear();
     setAccount(null);
     setStatus('signedOut');

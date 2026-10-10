@@ -6,7 +6,7 @@ API     := apps/api
 MOBILE  := apps/mobile
 
 .DEFAULT_GOAL := help
-.PHONY: help env check-node install up down logs ps test test-unit test-e2e db-migrate db-up lint build mobile
+.PHONY: help env check-node install up down logs ps test test-unit test-e2e db-migrate db-up lint build mobile mobile-go
 
 help: ## List the targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  make %-12s %s\n", $$1, $$2}'
@@ -55,3 +55,6 @@ lint: check-node ## Lint + type-check API and mobile
 
 mobile: ## Build and run the Android dev build on the emulator/device
 	cd $(MOBILE) && npx expo run:android
+
+mobile-go: ## Serve the app to Expo Go on a phone on the same Wi-Fi (scan the QR code with Expo Go)
+	cd $(MOBILE) && npx expo start --go

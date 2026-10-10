@@ -9,6 +9,7 @@
     "@tanstack/react-query": "^5.104.1",
     "expo": "~57.0.27",
     "expo-application": "~57.0.3",
+    "expo-audio": "~57.0.5",
     "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.21",
     "expo-dev-client": "~57.0.19",
@@ -17,6 +18,7 @@
     "expo-glass-effect": "~57.0.4",
     "expo-image": "~57.0.5",
     "expo-linking": "~57.0.12",
+    "expo-location": "~57.0.20",
     "expo-router": "~57.0.25",
     "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.9",
@@ -33,7 +35,8 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.10.1"
+    "react-native-worklets": "0.10.1",
+    "socket.io-client": "^4.8.4"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -41,6 +44,7 @@
   },
   "scripts": {
     "start": "expo start --dev-client",
+    "start:go": "expo start --go",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint"

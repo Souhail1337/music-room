@@ -12,7 +12,7 @@ export default async function setup(): Promise<void> {
   const client = new pg.Client({ connectionString: url });
   await client.connect();
   await client.query(
-    'TRUNCATE action_logs, auth_tokens, sessions, users CASCADE',
+    'TRUNCATE votes, suggestions, event_invites, events, tracks, action_logs, auth_tokens, sessions, users CASCADE',
   );
   await client.end();
 }

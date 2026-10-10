@@ -68,6 +68,15 @@ export class UsersService {
     }
   }
 
+  /** FR-11 invite search: display-name prefix or exact email, ≤ 20, never the caller. */
+  search(
+    q: string,
+    excludeId: string,
+  ): Promise<{ id: string; displayName: string }[]> {
+    const text = q.trim();
+    return this.users.search(text, normalizeEmail(text), excludeId, 20);
+  }
+
   markEmailVerified(id: string): Promise<User> {
     return this.users.update(id, { emailVerifiedAt: new Date() });
   }

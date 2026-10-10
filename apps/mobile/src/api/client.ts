@@ -87,6 +87,21 @@ class ApiClient {
     return this.tokens?.refreshToken ?? null;
   }
 
+  /** The current access token; the socket client sends it in its handshake. */
+  get accessToken(): string | null {
+    return this.tokens?.accessToken ?? null;
+  }
+
+  /** Refreshes the access token (single-flight). Used when the socket handshake reports an expired token. */
+  async refreshSession(): Promise<boolean> {
+    if (!this.tokens) return false;
+    try {
+      return await this.refresh();
+    } catch {
+      return false;
+    }
+  }
+
   async setTokens(tokens: StoredTokens): Promise<void> {
     this.tokens = { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
     await storage.setTokens(this.tokens);

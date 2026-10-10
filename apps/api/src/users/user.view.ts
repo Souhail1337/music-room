@@ -36,3 +36,17 @@ export class MeView {
     };
   }
 }
+
+/** The only user fields other people may see in search results. */
+export class UserSummary {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ example: 'Sam' })
+  displayName: string;
+}
+
+export class UserSummaryList {
+  @ApiProperty({ type: [UserSummary] })
+  items: UserSummary[];
+}

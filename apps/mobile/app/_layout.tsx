@@ -52,6 +52,18 @@ function RootNavigator() {
       <Stack.Protected guard={status === 'signedIn'}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="events/new" options={{ title: 'New event' }} />
+        <Stack.Screen name="events/[id]/index" options={{ title: '' }} />
+        <Stack.Screen name="events/[id]/edit" options={{ title: 'Edit event' }} />
+        {/* Sheets: one deep at most; Android back closes them first. */}
+        <Stack.Screen
+          name="events/[id]/suggest"
+          options={{ title: 'Suggest a track', presentation: 'modal', headerStyle: { backgroundColor: tokens.colors.surfaceOverlay } }}
+        />
+        <Stack.Screen
+          name="events/[id]/invite"
+          options={{ title: 'Invite people', presentation: 'modal', headerStyle: { backgroundColor: tokens.colors.surfaceOverlay } }}
+        />
       </Stack.Protected>
       <Stack.Protected guard={status === 'unverified'}>
         <Stack.Screen name="check-email" options={{ headerShown: false }} />

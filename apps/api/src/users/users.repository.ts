@@ -25,4 +25,25 @@ export class UsersRepository {
   update(id: string, data: Prisma.UserUpdateInput): Promise<User> {
     return this.prisma.user.update({ where: { id }, data });
   }
+
+  /** Display-name prefix (case-insensitive) or exact email; only id + display name leave. */
+  search(
+    q: string,
+    email: string,
+    excludeId: string,
+    take: number,
+  ): Promise<{ id: string; displayName: string }[]> {
+    return this.prisma.user.findMany({
+      where: {
+        id: { not: excludeId },
+        OR: [
+          { displayName: { startsWith: q, mode: 'insensitive' } },
+          { email },
+        ],
+      },
+      select: { id: true, displayName: true },
+      orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
+      take,
+    });
+  }
 }

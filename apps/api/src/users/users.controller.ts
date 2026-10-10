@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiForbiddenResponse,
   ApiOkResponse,
@@ -11,7 +12,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator.js';
 import type { AuthUser } from '../common/decorators/current-user.decorator.js';
 import { Errors } from '../common/errors/app-error.js';
 import { UsersService } from './users.service.js';
-import { MeView } from './user.view.js';
+import { SearchUsersQuery } from './users.dto.js';
+import { MeView, UserSummaryList } from './user.view.js';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -33,5 +35,21 @@ export class UsersController {
     const user = await this.users.findById(current.id);
     if (!user) throw Errors.unauthorized();
     return MeView.of(user);
+  }
+
+  @Get('users/search')
+  @ApiOperation({
+    summary:
+      'Find people to invite: display-name prefix or exact email. Returns only id and display name; never yourself.',
+  })
+  @ApiOkResponse({ type: UserSummaryList })
+  @ApiBadRequestResponse({
+    description: '`VALIDATION_FAILED` (`q` shorter than 2 characters)',
+  })
+  async search(
+    @CurrentUser() current: AuthUser,
+    @Query() query: SearchUsersQuery,
+  ): Promise<UserSummaryList> {
+    return { items: await this.users.search(query.q, current.id) };
   }
 }

@@ -1,4 +1,4 @@
-// Music Room — data model. Binding constraints come from the architecture spine (AD-6, AD-10).
+// Music Room — data model. Binding constraints come from the architecture spine (AD-2, AD-5, AD-6, AD-8, AD-9, AD-10).
 
 generator client {
   provider            = "prisma-client"
@@ -22,9 +22,13 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  sessions   Session[]
-  authTokens AuthToken[]
-  actionLogs ActionLog[]
+  sessions     Session[]
+  authTokens   AuthToken[]
+  actionLogs   ActionLog[]
+  hostedEvents Event[]
+  eventInvites EventInvite[]
+  suggestions  Suggestion[]
+  votes        Vote[]
 
   @@map("users")
 }
@@ -88,4 +92,109 @@ model ActionLog {
   @@index([userId, createdAt])
   @@index([createdAt])
   @@map("action_logs")
+}
+
+/// A Deezer track (AD-8). The id is the Deezer ID; the preview URL is never stored.
+model Track {
+  id          String   @id
+  title       String
+  artist      String
+  artworkUrl  String?
+  durationSec Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  suggestions  Suggestion[]
+  nowPlayingIn Event[]
+
+  @@map("tracks")
+}
+
+enum EventVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum EventLicense {
+  EVERYONE
+  INVITED
+  ON_SITE
+}
+
+/// A Track Vote event. `version` increases on every change of its shared state (AD-1, AD-2).
+/// On-site venue and window are stored in UTC (AD-5).
+model Event {
+  id                  String          @id @default(uuid()) @db.Uuid
+  hostId              String          @db.Uuid
+  name                String
+  description         String          @default("")
+  visibility          EventVisibility @default(PUBLIC)
+  license             EventLicense    @default(EVERYONE)
+  lat                 Float?
+  lng                 Float?
+  radiusM             Int?
+  startsAt            DateTime?
+  endsAt              DateTime?
+  nowPlayingTrackId   String?
+  nowPlayingStartedAt DateTime?
+  version             Int             @default(1)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  host        User          @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  nowPlaying  Track?        @relation(fields: [nowPlayingTrackId], references: [id], onDelete: SetNull)
+  invites     EventInvite[]
+  suggestions Suggestion[]
+
+  @@index([hostId])
+  @@index([visibility, createdAt])
+  @@map("events")
+}
+
+model EventInvite {
+  eventId   String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([userId])
+  @@map("event_invites")
+}
+
+/// A queued track. One per (event, track): suggesting a queued track becomes a vote (AD-2).
+/// Queue order is computed (voteCount DESC, createdAt ASC), never stored.
+model Suggestion {
+  id            String   @id @default(uuid()) @db.Uuid
+  eventId       String   @db.Uuid
+  trackId       String
+  suggestedById String   @db.Uuid
+  voteCount     Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  track       Track @relation(fields: [trackId], references: [id], onDelete: Restrict)
+  suggestedBy User  @relation(fields: [suggestedById], references: [id], onDelete: Cascade)
+  votes       Vote[]
+
+  @@unique([eventId, trackId])
+  @@index([eventId, voteCount(sort: Desc), createdAt])
+  @@index([suggestedById])
+  @@map("suggestions")
+}
+
+/// One vote per user per suggestion (AD-2): the composite key is the unique constraint.
+model Vote {
+  userId       String   @db.Uuid
+  suggestionId String   @db.Uuid
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  suggestion Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, suggestionId])
+  @@index([suggestionId])
+  @@map("votes")
 }

@@ -675,7 +675,11 @@ describe('Track Vote (e2e)', () => {
       expect(ids).toContain(other.id);
       expect(ids).not.toContain(me.id);
       for (const item of byName.body.items)
-        expect(Object.keys(item).sort()).toEqual(['displayName', 'id']);
+        expect(Object.keys(item).sort()).toEqual([
+          'displayName',
+          'id',
+          'isFriend',
+        ]);
       const byEmail = await http()
         .get('/users/search')
         .query({ q: other.email.toUpperCase() })

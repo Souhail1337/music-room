@@ -157,7 +157,17 @@ export default function PlaylistScreen() {
               {!canEdit && <Chip icon="eye-outline" label="View only" />}
             </View>
             <Text variant="bodySmall" style={styles.meta}>
-              By {detail.playlist.owner.displayName} · {detail.tracks.length} {detail.tracks.length === 1 ? 'track' : 'tracks'}
+              By{' '}
+              <Text
+                variant="bodySmall"
+                style={styles.ownerLink}
+                onPress={() => router.push(`/users/${detail.playlist.owner.id}`)}
+                accessibilityRole="link"
+                accessibilityLabel={`Owner ${detail.playlist.owner.displayName}. Open profile`}
+              >
+                {detail.playlist.owner.displayName}
+              </Text>{' '}
+              · {detail.tracks.length} {detail.tracks.length === 1 ? 'track' : 'tracks'}
               {detail.lastEditor ? ` · Last edited by ${detail.lastEditor.displayName}` : ''}
             </Text>
             {detail.playlist.description ? (
@@ -200,6 +210,7 @@ const styles = StyleSheet.create({
   content: { padding: tokens.spacing.margin, gap: tokens.spacing[2], paddingBottom: tokens.spacing[6] },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: tokens.spacing[1] },
   meta: { color: tokens.colors.inkSecondary },
+  ownerLink: { color: tokens.colors.inkPrimary, textDecorationLine: 'underline' },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   footer: {
     padding: tokens.spacing.margin,

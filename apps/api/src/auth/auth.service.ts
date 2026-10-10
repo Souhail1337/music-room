@@ -85,7 +85,7 @@ export class AuthService {
 
     let user = await this.users.findByGoogleSub(identity.sub);
     if (!user) {
-      // Linking Google to an existing email account is FR-3 (spec D), not an implicit side effect of login.
+      // Linking Google to an existing email account is explicit (POST /me/google, FR-3), never a side effect of login.
       if (await this.users.findByEmail(identity.email))
         throw Errors.accountExists();
       user = await this.users.createFromGoogle({
@@ -95,6 +95,14 @@ export class AuthService {
       });
     }
     return this.issueSession(user);
+  }
+
+  /** FR-3: verify the ID token on the server (AD-6), then link its `sub` to this account. */
+  async linkGoogle(userId: string, idToken: string): Promise<MeView> {
+    if (!this.google.isConfigured()) throw Errors.googleNotConfigured();
+    const identity = await this.google.verify(idToken);
+    if (!identity) throw Errors.googleTokenInvalid();
+    return MeView.of(await this.users.linkGoogle(userId, identity.sub));
   }
 
   async refresh(refreshToken: string): Promise<TokensResponse> {

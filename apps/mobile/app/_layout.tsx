@@ -59,6 +59,9 @@ function RootNavigator() {
       <Stack.Protected guard={status === 'signedIn'}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="profile/edit/[section]" options={{ title: 'Edit profile' }} />
+        <Stack.Screen name="friends/index" options={{ title: 'Friends' }} />
+        <Stack.Screen name="users/[id]" options={{ title: '' }} />
         <Stack.Screen name="events/new" options={{ title: 'New event' }} />
         <Stack.Screen name="events/[id]/index" options={{ title: '' }} />
         <Stack.Screen name="events/[id]/edit" options={{ title: 'Edit event' }} />

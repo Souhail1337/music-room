@@ -8,6 +8,7 @@ import { AuthService } from './auth.service.js';
 import { EmailVerifiedGuard } from './email-verified.guard.js';
 import { GoogleVerifierService } from './google-verifier.service.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { LinkGoogleController } from './link-google.controller.js';
 import { MailService } from './mail.service.js';
 import { SessionsService } from './sessions.service.js';
 
@@ -23,7 +24,7 @@ import { SessionsService } from './sessions.service.js';
       }),
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, LinkGoogleController],
   providers: [
     AuthService,
     SessionsService,

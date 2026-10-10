@@ -21,3 +21,9 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-c-playlist-editor.md`
   summary: Unit-test the mobile playlist cache rules (applyPlaylistState force/stale drop, mergePlaylist) and conflictText once a mobile test runner exists.
   evidence: apps/mobile has no test runner; breaking the equal-version `force` rule would leave an optimistic reorder on screen after a 409 with nothing failing.
+- source_spec: `_bmad-output/implementation-artifacts/spec-d-profile-and-friends.md`
+  summary: E2E-test the /users/search 20-result cap with >20 matches and friends first.
+  evidence: changing the second `take` to `limit` returns up to 40 rows and no test fails.
+- source_spec: `_bmad-output/implementation-artifacts/spec-d-profile-and-friends.md`
+  summary: Unit-test mobile profile helpers (fieldErrors path mapping, toUpdate comma split, formatBirthday timezone) once a mobile test runner exists.
+  evidence: keeping the full `musicPrefs.genres` path in fieldErrors would hide inline errors with nothing failing.

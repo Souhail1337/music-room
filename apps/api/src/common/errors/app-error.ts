@@ -107,6 +107,27 @@ export const Errors = {
       'This track is no longer in the queue.',
       HttpStatus.NOT_FOUND,
     ),
+  alreadyFriends: () =>
+    new AppError(
+      'ALREADY_FRIENDS',
+      "You're already friends.",
+      HttpStatus.CONFLICT,
+    ),
+  friendRequestNotFound: () =>
+    new AppError(
+      'NOT_FOUND',
+      'This friend request no longer exists.',
+      HttpStatus.NOT_FOUND,
+    ),
+  notFriends: () =>
+    new AppError(
+      'NOT_FOUND',
+      "You aren't friends with this person.",
+      HttpStatus.NOT_FOUND,
+    ),
+  googleAlreadyLinked: (
+    message = 'This Google account is already linked to another Music Room account.',
+  ) => new AppError('GOOGLE_ALREADY_LINKED', message, HttpStatus.CONFLICT),
   userNotFound: () =>
     new AppError('USER_NOT_FOUND', 'No such user.', HttpStatus.NOT_FOUND),
   trackNotFound: () =>

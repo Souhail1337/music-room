@@ -19,6 +19,11 @@ model User {
   displayName     String
   emailVerifiedAt DateTime?
   googleSub       String?   @unique
+  /// Profile sections (AD-7): each is read only through ProfileView, which decides who sees it.
+  publicInfo      Json      @default("{}")
+  friendsInfo     Json      @default("{}")
+  privateInfo     Json      @default("{}")
+  musicPrefs      Json      @default("{}")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -30,24 +35,29 @@ model User {
   suggestions  Suggestion[]
   votes        Vote[]
 
-  ownedPlaylists   Playlist[]       @relation("PlaylistOwner")
-  editedPlaylists  Playlist[]       @relation("PlaylistLastEditor")
-  playlistInvites  PlaylistInvite[]
-  playlistTracks   PlaylistTrack[]
+  ownedPlaylists  Playlist[]       @relation("PlaylistOwner")
+  editedPlaylists Playlist[]       @relation("PlaylistLastEditor")
+  playlistInvites PlaylistInvite[]
+  playlistTracks  PlaylistTrack[]
+
+  friendshipsAsA         Friendship[]    @relation("FriendshipA")
+  friendshipsAsB         Friendship[]    @relation("FriendshipB")
+  friendRequestsSent     FriendRequest[] @relation("FriendRequestFrom")
+  friendRequestsReceived FriendRequest[] @relation("FriendRequestTo")
 
   @@map("users")
 }
 
 /// One row per issued refresh token. Rows created by rotating the same login share a familyId (AD-6).
 model Session {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @db.Uuid
-  familyId   String    @db.Uuid
-  tokenHash  String    @unique
-  expiresAt  DateTime
-  rotatedAt  DateTime?
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  familyId  String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  rotatedAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -180,9 +190,9 @@ model Suggestion {
   voteCount     Int      @default(0)
   createdAt     DateTime @default(now())
 
-  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  track       Track @relation(fields: [trackId], references: [id], onDelete: Restrict)
-  suggestedBy User  @relation(fields: [suggestedById], references: [id], onDelete: Cascade)
+  event       Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  track       Track  @relation(fields: [trackId], references: [id], onDelete: Restrict)
+  suggestedBy User   @relation(fields: [suggestedById], references: [id], onDelete: Cascade)
   votes       Vote[]
 
   @@unique([eventId, trackId])
@@ -266,4 +276,35 @@ model PlaylistTrack {
   @@index([playlistId, position])
   @@index([addedById])
   @@map("playlist_tracks")
+}
+
+/// A mutual friendship (FR-8). The pair is stored canonically (userAId < userBId), so the primary
+/// key covers both directions.
+model Friendship {
+  userAId   String   @db.Uuid
+  userBId   String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  userA User @relation("FriendshipA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB User @relation("FriendshipB", fields: [userBId], references: [id], onDelete: Cascade)
+
+  @@id([userAId, userBId])
+  @@index([userBId])
+  @@map("friendships")
+}
+
+/// A pending friend request. Accepting, declining or cancelling deletes it; a request crossing one
+/// in the other direction creates the friendship instead.
+model FriendRequest {
+  id          String   @id @default(uuid()) @db.Uuid
+  requesterId String   @db.Uuid
+  addresseeId String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  requester User @relation("FriendRequestFrom", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendRequestTo", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId])
+  @@map("friend_requests")
 }

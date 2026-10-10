@@ -26,16 +26,29 @@ export class UsersRepository {
     return this.prisma.user.update({ where: { id }, data });
   }
 
-  /** Display-name prefix (case-insensitive) or exact email; only id + display name leave. */
+  /** Sets googleSub only if none is linked yet; returns whether this call linked it. */
+  async linkGoogleSub(id: string, googleSub: string): Promise<boolean> {
+    const { count } = await this.prisma.user.updateMany({
+      where: { id, googleSub: null },
+      data: { googleSub },
+    });
+    return count > 0;
+  }
+
+  /**
+   * Display-name prefix (case-insensitive) or exact email; only id + display name leave.
+   * `ids` restricts the search to (`in`) or away from (`notIn`) a set of users.
+   */
   search(
     q: string,
     email: string,
     excludeId: string,
     take: number,
+    ids?: { in: string[] } | { notIn: string[] },
   ): Promise<{ id: string; displayName: string }[]> {
     return this.prisma.user.findMany({
       where: {
-        id: { not: excludeId },
+        AND: [{ id: { not: excludeId } }, ...(ids ? [{ id: ids }] : [])],
         OR: [
           { displayName: { startsWith: q, mode: 'insensitive' } },
           { email },

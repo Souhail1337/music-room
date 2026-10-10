@@ -1,6 +1,7 @@
 import { keepPreviousData, useIsMutating, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { AccessibilityInfo } from 'react-native';
+import { ME_QUERY_KEY } from '../auth/AuthProvider';
 import { ApiError } from './errors';
 import { eventsApi, type Coords, type EventDetail, type EventState, type QueuePush, type Scope } from './events';
 import { musicApi } from './music';
@@ -13,7 +14,7 @@ import {
   type VersionConflictDetails,
 } from './playlists';
 import { realtime } from './socket';
-import { usersApi, type UserRef } from './users';
+import { friendsApi, usersApi, type Profile, type ProfileUpdate, type UserRef } from './users';
 
 export const queryKeys = {
   event: (id: string) => ['event', id] as const,
@@ -26,6 +27,12 @@ export const queryKeys = {
   playlists: (scope: PlaylistScope, q: string) => ['playlists', scope, q] as const,
   allPlaylists: ['playlists'] as const,
   playlistInvites: (id: string) => ['playlistInvites', id] as const,
+  myProfile: ['profile', 'me'] as const,
+  profile: (id: string) => ['profile', id] as const,
+  allProfiles: ['profile'] as const,
+  friends: ['friends'] as const,
+  friendRequests: ['friendRequests'] as const,
+  allUsers: ['users'] as const,
 };
 
 /** 404 and 403 are answers, not glitches: don't retry them. */
@@ -382,5 +389,60 @@ export function useStorePlaylist() {
   return (data: PlaylistDetail) => {
     queryClient.setQueryData<PlaylistDetail>(queryKeys.playlist(data.playlist.id), (old) => mergePlaylist(old, data));
     void queryClient.invalidateQueries({ queryKey: queryKeys.allPlaylists });
+  };
+}
+
+// --- Profile and friends (FR-3, FR-6..FR-8) ------------------------------------------------------
+
+export function useMyProfile() {
+  return useQuery({ queryKey: queryKeys.myProfile, queryFn: usersApi.myProfile, retry });
+}
+
+/** Someone's profile, as much of it as the server lets me see (AD-7). */
+export function useProfile(id: string) {
+  return useQuery({ queryKey: queryKeys.profile(id), queryFn: () => usersApi.profile(id), retry });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ProfileUpdate) => usersApi.updateProfile(body),
+    onSuccess: (profile) => {
+      queryClient.setQueryData(queryKeys.myProfile, profile);
+      queryClient.setQueryData(queryKeys.profile(profile.id), profile);
+      // The account query carries the display name too.
+      void queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
+    },
+  });
+}
+
+export function useFriends() {
+  return useQuery({ queryKey: queryKeys.friends, queryFn: friendsApi.list, retry });
+}
+
+export function useFriendRequests() {
+  return useQuery({ queryKey: queryKeys.friendRequests, queryFn: friendsApi.requests, retry });
+}
+
+/**
+ * Friend actions. No realtime for friendships: after each one, every list and profile that depends
+ * on it is refetched; a returned profile is written straight into its cache.
+ */
+export function useFriendActions() {
+  const queryClient = useQueryClient();
+  const settle = (profile?: Profile | void) => {
+    if (profile) queryClient.setQueryData(queryKeys.profile(profile.id), profile);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.friends });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.friendRequests });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.allUsers });
+    if (!profile) void queryClient.invalidateQueries({ queryKey: queryKeys.allProfiles });
+  };
+  const opts = { onSettled: (data: Profile | void | undefined) => settle(data ?? undefined) };
+  return {
+    request: useMutation({ mutationFn: (userId: string) => friendsApi.request(userId), ...opts }),
+    accept: useMutation({ mutationFn: (requestId: string) => friendsApi.accept(requestId), ...opts }),
+    decline: useMutation({ mutationFn: (requestId: string) => friendsApi.decline(requestId), ...opts }),
+    cancel: useMutation({ mutationFn: (requestId: string) => friendsApi.cancel(requestId), ...opts }),
+    remove: useMutation({ mutationFn: (userId: string) => friendsApi.remove(userId), ...opts }),
   };
 }

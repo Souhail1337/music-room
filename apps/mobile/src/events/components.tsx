@@ -34,18 +34,21 @@ export function TrackRow({
   onPress,
   disabled,
   accessibilityLabel,
+  highlighted,
 }: {
   track: Track;
   trailing?: ReactNode;
   onPress?: () => void;
   disabled?: boolean;
   accessibilityLabel?: string;
+  /** The track the player is on: its title turns accent red. */
+  highlighted?: boolean;
 }) {
   const body = (
     <View style={styles.row}>
       <Artwork uri={track.artworkUrl} />
       <View style={styles.rowText}>
-        <Text variant="bodyLarge" numberOfLines={1}>
+        <Text variant="bodyLarge" numberOfLines={1} style={highlighted ? styles.highlighted : undefined}>
           {track.title}
         </Text>
         <Text variant="bodySmall" numberOfLines={1} style={styles.meta}>
@@ -69,7 +72,7 @@ export function TrackRow({
   );
 }
 
-/** Up arrow + count. Green means exactly "you voted for this track". 48dp hit area. */
+/** Up arrow + count. Accent red (filled icon) means "you voted for this track". 48dp hit area. */
 export function VoteButton({
   count,
   voted,
@@ -286,6 +289,7 @@ export function EmptyState({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   meta: { color: c.inkSecondary },
+  highlighted: { color: c.accent },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: tokens.spacing[2], paddingVertical: tokens.spacing[1] },
   rowText: { flex: 1, justifyContent: 'center' },
   artFallback: { backgroundColor: c.surfaceOverlay, alignItems: 'center', justifyContent: 'center' },

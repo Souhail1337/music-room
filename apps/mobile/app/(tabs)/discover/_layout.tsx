@@ -8,10 +8,11 @@ export default function DiscoverLayout() {
         headerStyle: { backgroundColor: tokens.colors.surfaceBase },
         headerTintColor: tokens.colors.inkPrimary,
         headerShadowVisible: false,
+        headerTitleStyle: { fontWeight: '700' },
         contentStyle: { backgroundColor: tokens.colors.surfaceBase },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Discover' }} />
+      <Stack.Screen name="index" options={{ title: 'Home' }} />
     </Stack>
   );
 }

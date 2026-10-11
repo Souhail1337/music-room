@@ -22,7 +22,7 @@ sources:
 
 ## Information Architecture
 
-Bottom navigation has 4 tabs: **Discover · Events · Playlists · Profile**.
+Bottom navigation has 5 tabs: **Home · Search · Events · Playlists · Profile**. While a preview plays, a **mini-player** sits directly above the tab bar on every tab.
 
 | Surface | Reached from | Purpose |
 |---|---|---|
@@ -31,7 +31,10 @@ Bottom navigation has 4 tabs: **Discover · Events · Playlists · Profile**.
 | Check your email | Sign up | Explains verification; Resend; "I've verified" refresh |
 | Log in | Welcome | Email/password and social buttons; "Forgot password?" |
 | Forgot / Reset password | Log in | Request a reset email, then set a new password from the link |
-| Discover (home) | Tab, default after login | Search, then public events (live first) and public playlists |
+| Home | Tab, default after login | App header (logo, search icon → Search tab, profile avatar → Profile tab), filter chips (All · Events · Playlists), then shelves: "Live now", "Events", "Playlists" (public only) |
+| Search | Tab, Home search icon | Search any song and play its 30-second preview. Nothing is added to events or playlists from here |
+| Mini-player | Above the tab bar while a preview is loaded | Artwork, title, artist, play/pause, close, red progress line; tap to open the full-screen player |
+| Full-screen player | Mini-player | Large artwork, title/artist, seek bar, play/pause; chevron-down or back closes it |
 | Events | Tab | My events (hosting), Invited, Joined; FAB to create an event |
 | Create / Edit event | Events FAB, event overflow | Name, description, visibility, vote license (Everyone / Invited only / On-site + time window), location |
 | Event (Track Vote) | Event card | Now Playing, a queue ranked by votes, and "Suggest a track" |
@@ -73,6 +76,10 @@ Visual specs live in `DESIGN.md.Components`.
 | Editable track list | Playlist | Long-press the drag handle to reorder. Swipe or use the overflow menu to remove. Only shown with edit rights; otherwise the list is read-only and the handles are hidden. |
 | Presence avatars | Playlist header | Who is viewing or editing right now. Tap to see the list. |
 | Track search sheet | Event / Playlist | Debounced search (300ms). Tapping a result adds it and closes the sheet. A track already in the list shows "Already added". |
+| Shelves | Home | Horizontal, swipeable rows of square cards. Never auto-scroll or auto-play. A filter chip hides the shelves of the other kind. Empty shelves are hidden; no public events shows "No public events right now. Create one." |
+| Search & play | Search tab | Debounced search (300ms). Tapping a row (or its play button) fetches a fresh preview URL from the API and plays it; tapping the row that is playing pauses it. No preview → snackbar "No preview for this track."; music service down → "Music search is unavailable right now." |
+| Standalone player | App-wide | One track at a time, no queue. Playing another track replaces it. A preview that ends stops at the end (Play starts it over). Close stops the audio and hides the mini-player. Logging out stops and clears it. No background or lock-screen playback. |
+| Audio focus | App-wide | Only one source is heard: starting a Search preview pauses the event host's playback (the event screen shows Play again), and the host pressing Play pauses the Search preview. |
 | Visibility / license chips | Create / Edit forms | Single-select. Choosing "On-site" reveals a location picker and a time window. |
 | Snackbar | Global | Feedback, conflicts and permission denials. One at a time. 4s, or until the user acts. |
 | Privacy section card | Profile | Each card is labeled with who sees it (Everyone / Friends / Only me). Tap to edit. |
@@ -84,7 +91,7 @@ Visual specs live in `DESIGN.md.Components`.
 | Loading | Any list | Skeleton rows (3 to 5). No full-screen spinners after the first load. |
 | Empty queue | Event | "No tracks yet. Suggest the first one." with a primary button. |
 | Empty playlist | Playlist | "Empty playlist. Add a track to get started." |
-| Empty Discover | Discover | "No public events right now. Create one." |
+| Empty Home | Home | "No public events right now. Create one." |
 | Can view, can't vote | Event | Vote buttons are disabled, and a banner above the queue gives the reason (invited-only or on-site window). |
 | Outside time window | Event | The banner shows the window: "Voting opens at 16:00." |
 | Location permission denied | Event (on-site license) | Banner: "Allow location to vote at this event," with a button that opens Android settings. |
@@ -99,10 +106,11 @@ Visual specs live in `DESIGN.md.Components`.
 
 - Tap acts. Long-press on the drag handle reorders.
 - Swipe left on a playlist row to remove it, with an Undo snackbar.
-- Pull-to-refresh works on Discover, Events, Playlists and Friends. Live screens update via push, but pull-to-refresh is a manual fallback there too.
+- Pull-to-refresh works on Home, Events, Playlists and Friends. Live screens update via push, but pull-to-refresh is a manual fallback there too.
 - FAB on Events and Playlists for Create.
 - Android back always closes the top sheet first.
-- **Banned:** carousels, auto-playing hero media and nested modals.
+- Home shelves are plain horizontal scroll rows the user swipes; they are not carousels.
+- **Banned:** auto-advancing carousels, auto-playing hero media and nested modals.
 
 ## Accessibility Floor
 
@@ -122,15 +130,15 @@ Visual contrast lives in `DESIGN.md`.
 2. She taps **Sign up**, enters her email, password and name, and submits.
 3. The "Check your email" screen appears. She opens her mail app and taps the link.
 4. She returns and taps "I've verified". The app checks with the server.
-5. **Climax:** she lands on Discover, already filled with live public events.
+5. **Climax:** she lands on Home, its "Live now" shelf already filled with live public events.
 
 Failure: she forgets her password a week later. Log in → "Forgot password?" → email → link → new password → logged in.
-Alt: **Continue with Google** skips steps 2–4 and goes straight to Discover.
+Alt: **Continue with Google** skips steps 2–4 and goes straight to Home.
 
 ### Flow 2: Voting at a party (Yasmine, Saturday night, at Karim's flat)
 
 1. Karim (the host) has created the public event "Karim's 25th" with the license "On-site, 20:00–02:00".
-2. Yasmine opens Discover and sees the event card with **LIVE** and the On-site chip.
+2. Yasmine opens Home and sees the event card with **LIVE** in the "Live now" shelf.
 3. She taps it. The Event screen shows Now Playing and the ranked queue.
 4. Android asks for location permission and she allows it.
 5. She taps **Suggest a track**, searches "Daft Punk", and taps *One More Time*. It joins the bottom of the queue with 1 vote (hers).
@@ -151,6 +159,16 @@ Concurrency: two people vote for the same track in the same second. Both votes c
 7. **Climax:** both phones show the same playlist in the same order, and the playlist is ready for Saturday.
 
 Failure: Sam's friend (not invited) gets a link and sees "This playlist is private."
+
+### Flow 4: Just listening (Yasmine, on the bus)
+
+1. Yasmine opens the **Search** tab and types "daft punk".
+2. She taps *One More Time*. The preview starts and the mini-player appears above the tab bar.
+3. She switches to Playlists; the mini-player stays and the music keeps playing.
+4. She taps the mini-player. The full-screen player opens; she drags the seek bar to the chorus.
+5. **Climax:** she closes the player with the chevron, keeps browsing, and taps **×** on the mini-player when she arrives.
+
+Failure: a track has no preview. A snackbar says "No preview for this track." and nothing else changes.
 
 ## Settings: Server URL (V.5)
 

@@ -8,6 +8,7 @@ export default function ProfileLayout() {
         headerStyle: { backgroundColor: tokens.colors.surfaceBase },
         headerTintColor: tokens.colors.inkPrimary,
         headerShadowVisible: false,
+        headerTitleStyle: { fontWeight: '700' },
         contentStyle: { backgroundColor: tokens.colors.surfaceBase },
       }}
     >

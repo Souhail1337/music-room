@@ -4,6 +4,7 @@ import { ApiError, errorMessage } from '../api/errors';
 import type { EventDetail } from '../api/events';
 import { musicApi } from '../api/music';
 import { useAdvance } from '../api/queries';
+import { audioFocus } from '../player/audioFocus';
 
 /** Deezer previews are 30 seconds long. */
 export const PREVIEW_SECONDS = 30;
@@ -12,6 +13,7 @@ export const PREVIEW_SECONDS = 30;
  * Host-only playback (FR-16, AD-8, AD-9): play the 30-second preview of Now Playing, fetched fresh
  * just before playing; when it ends (or on Skip) ask the server to advance with the track we were
  * playing, then play whatever the server says is next. Other phones never play audio.
+ * Shares audio focus with the standalone (Search) player: starting one pauses the other.
  */
 export function useHostPlayer(eventId: string, detail: EventDetail | undefined, onMessage: (text: string) => void) {
   const player = useAudioPlayer(null);
@@ -20,6 +22,14 @@ export function useHostPlayer(eventId: string, detail: EventDetail | undefined, 
   // Nothing plays until the host presses Play once on this screen.
   const [armed, setArmed] = useState(false);
   const loadedFor = useRef<string | null>(null);
+
+  // One audio source at a time: claim focus before every play; give it back when the screen goes.
+  const pauseForFocus = useCallback(() => player.pause(), [player]);
+  const start = useCallback(() => {
+    audioFocus.claim('host', pauseForFocus);
+    player.play();
+  }, [player, pauseForFocus]);
+  useEffect(() => () => audioFocus.release(pauseForFocus), [pauseForFocus]);
 
   const nowPlaying = detail?.nowPlaying ?? null;
   const nowId = nowPlaying?.track.id ?? null;
@@ -57,7 +67,7 @@ export function useHostPlayer(eventId: string, detail: EventDetail | undefined, 
       .then(({ previewUrl }) => {
         if (cancelled) return;
         player.replace({ uri: previewUrl });
-        player.play();
+        start();
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -72,7 +82,7 @@ export function useHostPlayer(eventId: string, detail: EventDetail | undefined, 
     return () => {
       cancelled = true;
     };
-  }, [armed, nowKey, nowId, player, next, onMessage]);
+  }, [armed, nowKey, nowId, player, start, next, onMessage]);
 
   // Auto-advance when the preview ends.
   useEffect(() => {
@@ -93,8 +103,8 @@ export function useHostPlayer(eventId: string, detail: EventDetail | undefined, 
       return;
     }
     if (status.playing) player.pause();
-    else player.play();
-  }, [nowId, armed, status.playing, player, next]);
+    else start();
+  }, [nowId, armed, status.playing, player, start, next]);
 
   const skip = useCallback(() => {
     setArmed(true);

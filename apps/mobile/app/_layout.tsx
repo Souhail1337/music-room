@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
+import { PlayerProvider } from '@/player/PlayerProvider';
 import { navigationTheme, paperTheme, tokens } from '@/theme';
 import { SnackbarProvider } from '@/ui/Snackbar';
 
@@ -23,8 +24,11 @@ export default function RootLayout() {
             <ThemeProvider value={navigationTheme}>
               <SnackbarProvider>
                 <AuthProvider>
-                  <StatusBar style="light" />
-                  <RootNavigator />
+                  {/* The standalone (Search) player lives for the whole session; it stops on sign-out. */}
+                  <PlayerProvider>
+                    <StatusBar style="light" />
+                    <RootNavigator />
+                  </PlayerProvider>
                 </AuthProvider>
               </SnackbarProvider>
             </ThemeProvider>
@@ -53,11 +57,13 @@ function RootNavigator() {
         headerStyle: { backgroundColor: tokens.colors.surfaceBase },
         headerTintColor: tokens.colors.inkPrimary,
         headerShadowVisible: false,
+        headerTitleStyle: { fontWeight: '700' },
         contentStyle: { backgroundColor: tokens.colors.surfaceBase },
       }}
     >
       <Stack.Protected guard={status === 'signedIn'}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="player" options={{ headerShown: false, presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="profile/edit/[section]" options={{ title: 'Edit profile' }} />
         <Stack.Screen name="friends/index" options={{ title: 'Friends' }} />

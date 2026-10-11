@@ -1,23 +1,26 @@
 import { DarkTheme as NavDarkTheme, type Theme as NavTheme } from 'expo-router';
 import { MD3DarkTheme, type MD3Theme } from 'react-native-paper';
 
-/** DESIGN.md tokens ("Afterhours"). The app is dark-only. */
+/** DESIGN.md tokens ("Night Session", YouTube Music–style). The app is dark-only. */
 export const tokens = {
   colors: {
-    surfaceBase: '#0E0E12',
-    surfaceRaised: '#18181F',
-    surfaceOverlay: '#22222B',
-    inkPrimary: '#F2F1F7',
-    inkSecondary: '#A09FB0',
-    inkDisabled: '#5A5966',
-    accent: '#8B5CF6',
-    accentPressed: '#7C3AED',
+    surfaceBase: '#030303',
+    surfaceRaised: '#121212',
+    surfaceOverlay: '#212121',
+    inkPrimary: '#FFFFFF',
+    inkSecondary: '#AAAAAA',
+    inkDisabled: '#5F5F5F',
+    accent: '#FF0000',
+    accentPressed: '#CC0000',
     onAccent: '#FFFFFF',
-    voteActive: '#22C55E',
-    live: '#F43F5E',
+    /** "You voted for this track" uses the accent red. */
+    voteActive: '#FF0000',
+    live: '#FF0000',
     warning: '#F59E0B',
     error: '#EF4444',
-    borderHairline: '#2A2A34',
+    borderHairline: '#272727',
+    /** Scrim behind modal content and the inactive part of progress bars. */
+    track: 'rgba(255, 255, 255, 0.2)',
   },
   rounded: { sm: 8, md: 12, lg: 20, full: 9999 },
   spacing: { 1: 4, 2: 8, 3: 12, 4: 16, 5: 24, 6: 32, margin: 16 },
@@ -45,7 +48,7 @@ export const paperTheme: MD3Theme = {
     onSurface: c.inkPrimary,
     surfaceVariant: c.surfaceRaised,
     onSurfaceVariant: c.inkSecondary,
-    surfaceDisabled: 'rgba(242, 241, 247, 0.12)',
+    surfaceDisabled: 'rgba(255, 255, 255, 0.12)',
     onSurfaceDisabled: c.inkDisabled,
     outline: c.borderHairline,
     outlineVariant: c.borderHairline,

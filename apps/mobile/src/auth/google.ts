@@ -1,12 +1,18 @@
+import { TurboModuleRegistry } from 'react-native';
 import { appConfig, isGoogleConfigured } from '../config';
 
 export class GoogleNotConfiguredError extends Error {
-  constructor() {
-    super("Google sign-in isn't configured.");
+  constructor(message = "Google sign-in isn't configured.") {
+    super(message);
   }
 }
 
 type GoogleModule = typeof import('@react-native-google-signin/google-signin');
+
+/** False in Expo Go or a binary built without the module: requiring the JS package would then crash. */
+function isNativeModuleAvailable(): boolean {
+  return TurboModuleRegistry.get('RNGoogleSignin') != null;
+}
 
 function loadModule(): GoogleModule {
   // Loaded lazily: the native module only exists in a dev/production build, not in Expo Go.
@@ -20,6 +26,9 @@ function loadModule(): GoogleModule {
  */
 export async function getGoogleIdToken(): Promise<string | null> {
   if (!isGoogleConfigured()) throw new GoogleNotConfiguredError();
+  if (!isNativeModuleAvailable()) {
+    throw new GoogleNotConfiguredError("Google sign-in isn't available in this build of the app. Use the Android build.");
+  }
   const { GoogleSignin } = loadModule();
   GoogleSignin.configure({ webClientId: appConfig.googleWebClientId });
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -30,7 +39,7 @@ export async function getGoogleIdToken(): Promise<string | null> {
 }
 
 export async function googleSignOut(): Promise<void> {
-  if (!isGoogleConfigured()) return;
+  if (!isGoogleConfigured() || !isNativeModuleAvailable()) return;
   try {
     await loadModule().GoogleSignin.signOut();
   } catch {

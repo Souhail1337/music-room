@@ -1,0 +1,178 @@
+{
+  "warmup": {
+    "logins": 300,
+    "targetLoginsPerSec": 4,
+    "medMs": 73.6445,
+    "p95Ms": 211.77034999999995,
+    "maxMs": 1921.85,
+    "unexpectedErrorRate": 0
+  },
+  "stages": [
+    {
+      "stage": "vus_0025",
+      "vus": 25,
+      "requests": 1814,
+      "reqPerSec": 30.233333333333334,
+      "iterations": 1483,
+      "medMs": 10.5115,
+      "p95Ms": 58.115399999999966,
+      "p99Ms": 209.63864999999998,
+      "maxMs": 292.419,
+      "unexpectedErrorRate": 0,
+      "playlistEdits": 231,
+      "versionConflicts": 3,
+      "passed": true
+    },
+    {
+      "stage": "vus_0050",
+      "vus": 50,
+      "requests": 3579,
+      "reqPerSec": 59.65,
+      "iterations": 2937,
+      "medMs": 11.398,
+      "p95Ms": 122.8028999999999,
+      "p99Ms": 280.8181799999999,
+      "maxMs": 580.211,
+      "unexpectedErrorRate": 0,
+      "playlistEdits": 453,
+      "versionConflicts": 8,
+      "passed": true
+    },
+    {
+      "stage": "vus_0100",
+      "vus": 100,
+      "requests": 6402,
+      "reqPerSec": 106.7,
+      "iterations": 5225,
+      "medMs": 28.674,
+      "p95Ms": 550.49825,
+      "p99Ms": 918.36727,
+      "maxMs": 1267.245,
+      "unexpectedErrorRate": 0,
+      "playlistEdits": 774,
+      "versionConflicts": 72,
+      "passed": false
+    },
+    {
+      "stage": "vus_0150",
+      "vus": 150,
+      "requests": 7646,
+      "reqPerSec": 127.43333333333334,
+      "iterations": 6238,
+      "medMs": 220.447,
+      "p95Ms": 1217.4684999999997,
+      "p99Ms": 1944.76595,
+      "maxMs": 3596.824,
+      "unexpectedErrorRate": 0,
+      "playlistEdits": 946,
+      "versionConflicts": 264,
+      "passed": false
+    },
+    {
+      "stage": "vus_0200",
+      "vus": 200,
+      "requests": 8107,
+      "reqPerSec": 135.11666666666667,
+      "iterations": 7031,
+      "medMs": 459.241,
+      "p95Ms": 1689.7668999999996,
+      "p99Ms": 2798.20116,
+      "maxMs": 3713.562,
+      "unexpectedErrorRate": 0,
+      "playlistEdits": 1048,
+      "versionConflicts": 423,
+      "passed": false
+    },
+    {
+      "stage": "vus_0300",
+      "vus": 300,
+      "requests": 10044,
+      "reqPerSec": 167.4,
+      "iterations": 8755,
+      "medMs": 793.367,
+      "p95Ms": 2099.2622499999993,
+      "p99Ms": 2969.65516,
+      "maxMs": 3310.523,
+      "unexpectedErrorRate": 0,
+      "playlistEdits": 1262,
+      "versionConflicts": 737,
+      "passed": false
+    }
+  ],
+  "endpoints": [
+    {
+      "endpoint": "POST /auth/login",
+      "medMs": 109.208,
+      "p95Ms": 754.1385999999999,
+      "p99Ms": 1302.5925599999996,
+      "maxMs": 1966.652
+    },
+    {
+      "endpoint": "POST /auth/refresh",
+      "medMs": 182.7575,
+      "p95Ms": 967.47365,
+      "p99Ms": 1256.3106099999998,
+      "maxMs": 2127.54
+    },
+    {
+      "endpoint": "GET /events/:id",
+      "medMs": 254.8185,
+      "p95Ms": 1501.3509999999997,
+      "p99Ms": 1988.70203,
+      "maxMs": 3086.008
+    },
+    {
+      "endpoint": "PUT /events/:id/suggestions/:sid/vote",
+      "medMs": 499.2955,
+      "p95Ms": 2251.083349999999,
+      "p99Ms": 3137.77147,
+      "maxMs": 3664.035
+    },
+    {
+      "endpoint": "DELETE /events/:id/suggestions/:sid/vote",
+      "medMs": 934.235,
+      "p95Ms": 2369.729,
+      "p99Ms": 3124.5116,
+      "maxMs": 3598.785
+    },
+    {
+      "endpoint": "POST /events/:id/suggestions",
+      "medMs": 610.116,
+      "p95Ms": 2336.1940999999993,
+      "p99Ms": 3258.7575899999997,
+      "maxMs": 3713.562
+    },
+    {
+      "endpoint": "GET /playlists/:id",
+      "medMs": 268.08299999999997,
+      "p95Ms": 1354.0579999999998,
+      "p99Ms": 1678.3375999999998,
+      "maxMs": 2860.314
+    },
+    {
+      "endpoint": "POST /playlists/:id/tracks",
+      "medMs": 15.963,
+      "p95Ms": 303.6009999999999,
+      "p99Ms": 590.7071199999999,
+      "maxMs": 782.834
+    },
+    {
+      "endpoint": "PATCH /playlists/:id/tracks/:entryId",
+      "medMs": 312.193,
+      "p95Ms": 1404.8473999999999,
+      "p99Ms": 1942.2694,
+      "maxMs": 2371.693
+    },
+    {
+      "endpoint": "GET /music/search",
+      "medMs": 91.032,
+      "p95Ms": 581.0811999999996,
+      "p99Ms": 918.1449599999996,
+      "maxMs": 1970.423
+    }
+  ],
+  "maxSimultaneousUsers": 50,
+  "p95ThresholdMs": 500,
+  "maxErrorRate": 0.01,
+  "stageSeconds": 60
+}

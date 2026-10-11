@@ -4,9 +4,10 @@ import { StyleSheet, View } from 'react-native';
 import { HelperText, Text } from 'react-native-paper';
 import { ApiError, errorMessage } from '@/api/errors';
 import { useMyProfile, useUpdateProfile } from '@/api/queries';
-import type { Profile, ProfileUpdate } from '@/api/users';
+import type { Profile } from '@/api/users';
 import { Chip, EmptyState, SkeletonRows } from '@/events/components';
 import { isSectionKey, SECTIONS, type SectionKey } from '@/profile/components';
+import { fieldErrors, toUpdate, type Values } from '@/profile/form';
 import { tokens } from '@/theme';
 import { Field, PrimaryButton, Screen } from '@/ui/components';
 import { useSnackbar } from '@/ui/Snackbar';
@@ -38,14 +39,6 @@ export default function EditProfileSection() {
   );
 }
 
-type Values = Record<string, string>;
-
-const list = (text: string) =>
-  text
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
 function initialValues(section: SectionKey, p: Profile): Values {
   switch (section) {
     case 'public':
@@ -57,27 +50,6 @@ function initialValues(section: SectionKey, p: Profile): Values {
     case 'music':
       return { genres: p.musicPrefs.genres.join(', '), artists: p.musicPrefs.artists.join(', ') };
   }
-}
-
-/** The PATCH body for one section. Empty fields are sent as '' / [] so the server clears them. */
-function toUpdate(section: SectionKey, v: Values): ProfileUpdate {
-  switch (section) {
-    case 'public':
-      return { displayName: v.displayName.trim(), public: { bio: v.bio.trim(), city: v.city.trim() } };
-    case 'friends':
-      return { friends: { phone: v.phone.trim(), birthday: v.birthday.trim() } };
-    case 'private':
-      return { private: { fullName: v.fullName.trim(), address: v.address.trim() } };
-    case 'music':
-      return { musicPrefs: { genres: list(v.genres), artists: list(v.artists) } };
-  }
-}
-
-/** Server field paths ("public.bio", "musicPrefs.genres") → form keys. */
-function fieldErrors(error: ApiError): Values {
-  const out: Values = {};
-  for (const [path, message] of Object.entries(error.fieldErrors)) out[path.split('.').pop() ?? path] = message;
-  return out;
 }
 
 function SectionForm({ section, profile }: { section: SectionKey; profile: Profile }) {

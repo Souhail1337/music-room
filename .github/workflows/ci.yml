@@ -1,0 +1,102 @@
+# Music Room CI (NFR-15, NFR-8): lint + tests for the API and the mobile app, and a secret scan,
+# on every push and pull request. No deploy. The commands are the ones `make lint` / `make test`
+# run locally. Actions are pinned to commit SHAs (the comment names the release).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (lint, build, unit, e2e)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: musicroom
+          POSTGRES_PASSWORD: musicroom
+          POSTGRES_DB: musicroom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U musicroom -d musicroom"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      # Same env as a fresh clone (`make env`): the dev defaults from .env.example. The e2e suite
+      # runs against TEST_DATABASE_URL (musicroom_test), which prisma migrate deploy creates.
+      - name: Create .env from .env.example
+        working-directory: .
+        run: cp .env.example .env
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:e2e
+
+  mobile:
+    name: Mobile (type-check, lint, jest)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx expo lint
+      # Jest's transform cache makes the second run much faster than a cold one.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/jest-cache
+          key: jest-${{ runner.os }}-${{ hashFiles('apps/mobile/package-lock.json') }}
+          restore-keys: jest-${{ runner.os }}-
+      - run: npx jest --ci --cacheDirectory /tmp/jest-cache
+
+  secrets:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: 8.24.0
+      GITLEAKS_SHA256: cb49b7de5ee986510fe8666ca0273a6cc15eb82571f2f14832c9e8920751f3a4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # scan the whole history, not only the last commit
+      - name: Install gitleaks
+        run: |
+          curl -sSfL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          rm gitleaks.tar.gz
+      - name: Scan the git history
+        run: gitleaks git --no-banner --redact --verbose .

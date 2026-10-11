@@ -1,0 +1,9 @@
+# Load-test override (NFR-11): `make loadtest` starts the stack with this file on top of
+# docker-compose.yml. k6 runs from one IP and reuses accounts, so the per-IP limits
+# (100 req/min, auth 5 req/min per IP+account) would only measure the throttler.
+# Only the limits change — no code path does. `make up` restores the normal limits.
+services:
+  api:
+    environment:
+      THROTTLE_LIMIT: "${LOADTEST_THROTTLE_LIMIT:-10000000}"
+      AUTH_THROTTLE_LIMIT: "${LOADTEST_AUTH_THROTTLE_LIMIT:-10000000}"

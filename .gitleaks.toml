@@ -1,0 +1,13 @@
+# gitleaks configuration (NFR-8): the default rules, plus allowlists for known false positives.
+# Used by the pre-commit hook (.githooks/pre-commit, `make hooks`), `make secrets` and CI.
+title = "music-room"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known false positives"
+paths = [
+  # BMad's install manifest: SHA-256 file hashes next to names like "key-screens" look like API keys.
+  '''^_bmad/_config/files-manifest\.csv$''',
+]
